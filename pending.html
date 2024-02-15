@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulletin Board</title>
+</head>
+<link rel="stylesheet" href="/stylesheet.css">
+<style>
+    button{
+        background-color: transparent;
+        font-family: inherit;
+    }
+</style>
+
+<body>
+    <div id="main">
+        <h1>pending</h1>
+    </div>
+</body>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script defer>
+function apiMutationFetch(__body){
+    fetch("/api",{
+        method: "POST",
+        headers: {
+        "Content-Type":"application/json",
+        Accept: "application/json",
+        },
+        body: __body
+    }).then((r) => {
+        return r.json()
+    }).then((response)=>{
+        console.log(response);
+    })
+}
+function approve(id, el){
+    apiMutationFetch(
+        JSON.stringify({query: `
+            mutation{
+                move(id:"${id}", newStatus:APPROVED)
+            }
+        `})
+    )
+    $(el).parent().fadeOut()
+}
+function deny(id, el){
+    apiMutationFetch(
+        JSON.stringify({query: `
+            mutation{
+                move(id:"${id}", newStatus:DENIED)
+            }
+        `})
+    )
+    $(el).parent().fadeOut();
+}
+function permDelete(id, el){
+    apiMutationFetch(
+        JSON.stringify({query: `
+            mutation{
+                delete(id:"${id}")
+            }
+        `})
+    )
+    $(el).parent().fadeOut();
+}
+
+
+const body_query = `
+{
+    board(status:PENDING){
+        id
+        time
+        author
+        content
+    }
+}`
+
+fetch("/api", {
+    method: "POST",
+    headers: {
+        "Content-Type":"application/json",
+        Accept: "application/json",
+    },
+    body: JSON.stringify({query: body_query})
+})
+.then(r => r.json())
+.then(result => {
+    result.data.board.forEach(element =>{
+        let div = $(`
+            <div class="post">
+                <p class="con">${element.content}</p>
+                <p class="autr">${element.author}</p>
+                <button onclick="approve('${element.id}', this)">approve</button>
+                <button onclick="deny('${element.id}', this)">deny</button>
+                <button onclick="permDelete('${element.id}', this)">DELETE</button>
+            </div>
+        `)
+        div.hide();
+        $('#main').append(div);
+        div.fadeIn();
+    })
+})
+
+</script>
+</html>

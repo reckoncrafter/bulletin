@@ -1,0 +1,22 @@
+enum Status {
+    APPROVED
+    PENDING
+    DENIED
+}
+
+type Post {
+    id: ID!
+    author: String
+    time: Int
+    content: String
+}
+
+type Query {
+    post(id: ID!): Post
+    board(status: Status): [Post]
+}
+
+type Mutation {
+    move(id: ID!, newStatus: Status): Int
+    delete(id: ID!): Int
+}

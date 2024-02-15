@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>reckoneer.dev</title>
+</head>
+<link rel="stylesheet" href="/stylesheet.css">
+<!-- do you see it? -->
+<body>
+    <div id="main">
+        <div id="submission_area">
+            <h1>reckoneer.dev</h1>
+            <form id="postbox">
+                <textarea id="in_cont" placeholder="message" maxlength="128" name="content"></textarea><br>
+                <input id="in_autr" placeholder="author" name="author" type="text" maxlength="64">
+                <input id="in_subm"type="submit" value="post">
+            </form>
+            <span id="confirm_box"></span>
+        </div>
+    </div>
+</body>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script defer>
+$("#postbox").on("submit", function(event){
+    event.preventDefault();
+    setTimeout(()=>{
+        this.reset();
+    }, 1000)
+
+    let post_object = {
+        message: $('#in_cont').val(),
+        author: $("#in_autr").val(),
+        id: undefined,
+    }
+    
+    let response_status = undefined;
+    fetch('/', {
+        method: "POST",
+        headers: {
+        "Content-Type":"application/json",
+        Accept: "application/json",
+        },
+        body: JSON.stringify({
+            content: post_object.message,
+            author: post_object.author,
+        })
+    }).then((response)=>{
+        response_status = response.statusText;
+        if(response.status != 200){
+            return Promise.reject("Request Failed")
+        }
+        return response.json();
+    }).then((response)=>{
+        // Construct <div> and put to document
+        console.log(response);
+        if(post_object.id = response.id){ //yes, this is meant to be an assignment
+                let div = $(`
+                <div class="post" id="${post_object.id}">
+                    <p class="con">${post_object.message}</p>
+                    <p class="autr">${post_object.author}</p>
+                    <p style="color:grey;margin:0"><i>submitted</i></p>
+                </div>
+            `)
+            div.hide();
+            $("#submission_area").append(div);
+            div.fadeIn();
+        }
+        $("#confirm_box").text(response_status);
+
+        // Save to local storage
+        console.log(post_object);
+        sessionStorage.setItem(post_object.id, JSON.stringify(post_object));
+
+    }).catch((error)=>{
+        $("#confirm_box").text(response_status);
+    });
+
+})
+
+const body_query = `
+{
+    board(status:APPROVED){
+        id
+        time
+        author
+        content
+    }
+}`
+
+fetch(`/api?query=${body_query}`)
+.then(r => r.json())
+.then(result => {
+    result.data.board.forEach(element =>{
+        let div = $(`
+            <div class="post" id="${element.id}">
+                <p class="con">${element.content}</p>
+                <p class="autr">${element.author}</p>
+            </div>
+        `)
+        div.hide();
+        $('#main').append(div);
+        div.fadeIn();
+    })
+})
+
+// check for unapproved posts in localStorage
+.finally(() => {
+    let id_list = Object.keys(sessionStorage);
+    id_list.forEach((id) => {
+        let localPostObject = JSON.parse(sessionStorage.getItem(id));
+        //console.log(localPostObject);
+        //console.log($(`#${id}`).length);
+        if(!$(`#${id}`).length){
+            let div = $(`
+                <div class="post" id="${localPostObject.id}">
+                    <p class="con">${localPostObject.message}</p>
+                    <p class="autr">${localPostObject.author}</p>
+                    <p style="color:grey;margin:0"><i>awaiting approval...</i></p>
+                </div>
+            `)
+            div.hide();
+            $("#submission_area").append(div);
+            div.fadeIn();
+        }else{
+            sessionStorage.removeItem(id);
+        }
+    })
+})
+
+</script>
+</html>

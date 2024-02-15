@@ -1,0 +1,25 @@
+const rootValue = {
+    post: (id) =>{
+        return sample.find((post)=>post.id == id);
+    },
+}
+
+console.log(await query(`#graphql
+{
+    post(id: "aab"){
+        author
+    }
+}
+`))
+
+async function query(_query_){
+    return new Promise((resolve, reject)=>{
+        graphql({
+            schema,
+            source: _query_,
+            rootValue
+        }).then(response =>{
+            resolve(response);
+        })
+    })
+}

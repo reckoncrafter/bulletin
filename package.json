@@ -1,0 +1,21 @@
+{
+  "name": "bulletin",
+  "version": "1.0.0",
+  "description": "simple bulletin board with manual approval",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "Reckoneer",
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^4.10.0",
+    "@redis/client": "^1.5.14",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "graphql": "^16.8.1",
+    "graphql-http": "^1.22.0"
+  },
+  "type": "module"
+}
