@@ -38,15 +38,31 @@ const luaScripts = {
 
 
 // GraphQL
+// function authenticator(authData){
+//     return false;
+// }
+
 const schema = buildSchema(fs.readFileSync('./schema.graphql',{encoding:'utf8'}));
 
 const rootValue = {
     post: async ({id}) =>{
+        // if(!authenticator(null)){
+        //     console.log("AUTHENTICATION FAILED");
+        //     return null;
+        // }
+
         let post = JSON.parse(await redis.GET(id));
         console.log(post);
         return post;
     },
     board: async ({status}) => {
+        // if(status == "PENDING" || status == "DENIED"){
+        //     if(!authenticator(null)){
+        //         console.log("AUTHENTICATION FAILED");
+        //         return null;
+        //     }
+        // }
+
         let keyset = await redis.SMEMBERS(status);
         console.log("REQUESTED SET: ", keyset);
         let list = await redis.MGET(keyset);
@@ -63,11 +79,21 @@ const rootValue = {
         })
     },
     move: async ({id, newStatus}) => {
+        // if(!authenticator(null)){
+        //     console.log("AUTHENTICATION FAILED");
+        //     return null;
+        // }
+
         let answer = await redis.SMOVE("PENDING", newStatus, id);
         console.log(`[API] move(${newStatus}, ${id}): `, answer);
         return answer;
     },
     delete: async ({id}) =>{
+        // if(!authenticator(null)){
+        //     console.log("AUTHENTICATION FAILED");
+        //     return null;
+        // }
+
         let answer = await redis.EVAL(luaScripts.syncDelete, {
             arguments:[id]
         });
