@@ -5,46 +5,31 @@ import express from 'express';
 import {body, validationResult} from 'express-validator';
 import { randomUUID } from 'crypto';
 import { createClient } from '@redis/client';
+import { spawn } from 'child_process';
+
+// TODO: Overrequest protection (HTTP 429)
 
 // Redis Database
+const redis_server_process = spawn("redis-server", {
+    cwd: "/home/dcf/",
+    env: process.env
+});
+
+redis_server_process.stdout.on('data', (data) => {
+    console.log(`[REDIS SERVER]:  ${data}`);
+})
+
+process.on('SIGINT', function(){
+    redis_server_process.kill('SIGINT');
+    process.exit();
+});
+
 const redis = await createClient()
-.on('error', err => console.log("Redis Client Error", err))
+.on('error', err => {
+    console.error(err);
+    process.exit();
+})
 .connect();
-
-// Simulated Database
-var sample = [
-    {
-        id: "aaa",
-        time: 0,
-        author:"John Smith",
-        content:"Lorem Ipsum"
-    },
-    {
-        id: "aab",
-        time: 0,
-        author: "New User",
-        content: "questionable..."
-    },
-    {
-        id: "aac",
-        time: 0,
-        author: "Fuck Head",
-        content: "something disgusting"
-    },
-    {
-        id: "aad",
-        time: 1,
-        author: "Jane Doe",
-        content: "dolor sit amet"
-    }
-]
-
-function updateStatus(id, newStatus){
-    console.log(`updateStatus: ${id}, ${newStatus}`);
-    let index = sample.findIndex((post) => post.id == id);
-    sample[index].status = newStatus;
-    return 1;
-}
 
 const luaScripts = {
     syncDelete: `do for k,v in pairs({'APPROVED', 'PENDING', 'DENIED'}) do redis.call('SREM', v, ARGV[1]) end return redis.call('DEL', ARGV[1]) end`,
@@ -89,20 +74,6 @@ const rootValue = {
         console.log(`[API] delete(${id}): `, answer);
         return answer;
     }
-    /*
-    publish: ({message, author}) => {
-        let new_sample = {
-            id: randomUUID().slice(0,4),
-            status: "PENDING",
-            time: Date.now(),
-            author: author,
-            content: message,
-        }
-        sample = [...sample, new_sample];
-        console.log(new_sample);
-        return new_sample.id;
-    }
-    */
 }
 
 async function query(_query_){
@@ -118,6 +89,18 @@ async function query(_query_){
 }
 
 //ExpressJS
+var waiting = false;
+function limiter(){
+    if (waiting){
+        return true;
+    }
+    waiting = true;
+    setTimeout(()=>{
+        waiting = true;
+    }, 1000) // 60000 = 1min
+    return false;
+}
+
 const interruptor = function(req, res, next){
     redis.GET("__end__").then((red) => {
         console.log("is __end__? ", red == true);
@@ -126,7 +109,6 @@ const interruptor = function(req, res, next){
         }
         next();
     })
-
 }
 
 const app = express();
@@ -172,6 +154,11 @@ app.post('/', [
     if(req.body.content == "do you see it?"){
         redis.SET("__end__", "1");
         return res.sendStatus(418);
+    }
+
+    if(limiter()){
+        console.log("[EXPRESS]: Limiter Triggered");
+        return res.sendStatus(429);
     }
 
     console.log("[EXPRESS] New Submission: ", req.body);

@@ -17,7 +17,9 @@
 <body>
     <div id="main">
         <h1>pending</h1>
+        <button id="see_denied">see denied</button>
     </div>
+    
 </body>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -68,15 +70,16 @@ function permDelete(id, el){
 }
 
 
-const body_query = `
-{
-    board(status:PENDING){
+const body_query = function(status){
+return `{
+    board(status:${status}){
         id
         time
         author
         content
     }
 }`
+}
 
 fetch("/api", {
     method: "POST",
@@ -84,7 +87,7 @@ fetch("/api", {
         "Content-Type":"application/json",
         Accept: "application/json",
     },
-    body: JSON.stringify({query: body_query})
+    body: JSON.stringify({query: body_query('PENDING')})
 })
 .then(r => r.json())
 .then(result => {
@@ -101,6 +104,26 @@ fetch("/api", {
         div.hide();
         $('#main').append(div);
         div.fadeIn();
+    })
+})
+
+$('#see_denied').on('click', function(event){
+    fetch(`/api?query=${body_query("DENIED")}`)
+    .then(r => r.json())
+    .then(result => {
+        console.log(result);
+        result.data.board.forEach(element =>{
+            let div = $(`
+                <div class="post" id="${element.id}">
+                    <p class="con">${element.content}</p>
+                    <p class="autr">${element.author}</p>
+                    <button onclick="permDelete('${element.id}', this)">DELETE</button>
+                </div>
+            `)
+            div.hide();
+            $('#main').append(div);
+            div.fadeIn();
+        })
     })
 })
 
